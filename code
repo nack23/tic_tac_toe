@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Tic Tac Toe</title>
+  <style>
+    :root {
+      --win-color: #28a745;
+      --draw-color: #ffc107;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      height: 100%;
+      background: #121212;
+      font-family: Arial, sans-serif;
+      overflow: hidden;
+      color: #fff;
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      margin-top: 20px;
+    }
+
+    .board {
+      display: grid;
+      grid-template-columns: repeat(3, 100px);
+      gap: 10px;
+      justify-content: center;
+      margin: 30px auto;
+    }
+
+    .cell {
+      width: 100px;
+      height: 100px;
+      font-size: 2.5rem;
+      cursor: pointer;
+      background: white;
+      border: 2px solid #333;
+      transition: background 0.3s, transform 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius:10px;
+    }
+
+    .cell.disabled {
+      background: #ddd;
+      cursor: not-allowed;
+    }
+
+    .winning-cell {
+      background-color: #ff4d4d !important;
+      color: white;
+      font-weight: bold;
+    }
+
+    .turn {
+      font-size: 1.2rem;
+      background-color: var(--win-color);
+      margin-top: 20px;
+      padding: 10px 20px;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      margin-left: 30px;
+       margin-right: 30px;
+    
+    }
+
+    .popup {
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 10px;
+      font-size: 1.5rem;
+      display: inline-block;
+      animation: pop 0.4s ease-in-out;
+    }
+
+    .win { background-color: var(--win-color); color: #fff; }
+    .draw { background-color: var(--draw-color); color: #333; }
+
+    @keyframes pop {
+      0% { transform: scale(0.7); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    .reset-btn {
+      margin-top: 20px;
+      padding: 10px 20px;
+      font-size: 1rem;
+      background-color: #000;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .reset-btn:hover {
+      background-color: #444;
+    }
+
+    #rules-link {
+      margin-top: 15px;
+      color: #00aaff;
+      text-decoration: underline;
+      cursor: pointer;
+      font-size: 0.95rem;
+    }
+
+    /* Modal styles */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.8);
+      justify-content: center;
+      align-items: center;
+      z-index: 10;
+    }
+
+    .modal-content {
+      background: #1e1e1e;
+      padding: 25px;
+      border-radius: 10px;
+      width: 90%;
+      max-width: 400px;
+      text-align: left;
+      position: relative;
+      box-shadow: 0 0 10px rgba(0,0,0,0.5);
+      animation: popIn 0.4s ease;
+    }
+
+    .modal-content h2 {
+      color: #ffc107;
+      margin-bottom: 15px;
+      text-align: center;
+    }
+
+    .modal-content p,
+    .modal-content pre {
+      font-size: 0.95rem;
+      margin-bottom: 10px;
+      color: #ddd;
+    }
+
+    .modal-content pre {
+      background: #000;
+      padding: 10px;
+      border-radius: 5px;
+      font-family: monospace;
+    }
+
+    .close-btn {
+      position: absolute;
+      top: 10px;
+      right: 15px;
+      font-size: 20px;
+      cursor: pointer;
+      color: #fff;
+    }
+
+    @keyframes popIn {
+      from { transform: scale(0.8); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Tic Tac Toe</h1>
+  <div id="message" class="turn">🔄 Player ❌'s Turn</div>
+
+  <div class="board" id="board"></div>
+
+  <button class="reset-btn" onclick="resetGame()">🔁 Reset Game</button>
+
+  <!-- 📖 How to Play Link -->
+  <div id="rules-link" onclick="showRules()">📖 How to Play?</div>
+
+  <!-- 📖 Rules Modal -->
+  <div class="modal" id="rules-modal">
+    <div class="modal-content">
+      <span class="close-btn" onclick="closeRules()">✖</span>
+      <h2>How to Play</h2>
+      <p>This is the classic Tic Tac Toe game.</p>
+      <p>❌ and ⭕ take turns placing their symbol.</p>
+      <p>🎯 Goal: Get 3 of your symbols in a row (horizontal, vertical, or diagonal).</p>
+      <p>Example:</p>
+      <pre>
+❌ | ❌ | ❌
+⭕ | ⭕ |  
+   |    |  
+      </pre>
+      <p>If all cells are filled and no one wins, it's a 🤝 draw!</p>
+    </div>
+  </div>
+
+  <script>
+    const boardEl = document.getElementById('board');
+    const messageEl = document.getElementById('message');
+
+    let board = Array(9).fill('');
+    let currentPlayer = '❌';
+    let gameOver = false;
+
+    const winPatterns = [
+      [0,1,2],[3,4,5],[6,7,8],
+      [0,3,6],[1,4,7],[2,5,8],
+      [0,4,8],[2,4,6]
+    ];
+
+    function drawBoard() {
+      boardEl.innerHTML = '';
+      board.forEach((cell, i) => {
+        const cellEl = document.createElement('div');
+        cellEl.className = 'cell';
+        if (cell !== '' || gameOver) cellEl.classList.add('disabled');
+        cellEl.textContent = cell;
+        cellEl.addEventListener('click', () => handleMove(i));
+        boardEl.appendChild(cellEl);
+      });
+    }
+
+    function handleMove(i) {
+      if (board[i] !== '' || gameOver) return;
+
+      board[i] = currentPlayer;
+      drawBoard();
+      const winner = checkWinner();
+
+      if (winner) {
+        showResult(winner);
+        highlightWinner(winner.line);
+        gameOver = true;
+      } else if (!board.includes('')) {
+        showResult({ player: 'Draw' });
+        gameOver = true;
+      } else {
+        currentPlayer = currentPlayer === '❌' ? '⭕' : '❌';
+        messageEl.className = 'turn';
+        messageEl.textContent = `🔄 Player ${currentPlayer}'s Turn`;
+      }
+    }
+
+    function checkWinner() {
+      for (const line of winPatterns) {
+        const [a, b, c] = line;
+        if (board[a] && board[a] === board[b] && board[a] === board[c]) {
+          return { player: board[a], line };
+        }
+      }
+      return null;
+    }
+
+    function highlightWinner(line) {
+      const cells = document.querySelectorAll('.cell');
+      line.forEach(i => {
+        cells[i].classList.add('winning-cell');
+      });
+    }
+
+    function showResult(result) {
+      if (result.player === 'Draw') {
+        messageEl.className = 'popup draw';
+        messageEl.textContent = '🤝 It\'s a Draw!';
+      } else {
+        messageEl.className = 'popup win';
+        messageEl.textContent = `🏆 Player ${result.player} Wins!`;
+      }
+    }
+
+    function resetGame() {
+      board = Array(9).fill('');
+      currentPlayer = '❌';
+      gameOver = false;
+      messageEl.className = 'turn';
+      messageEl.textContent = `🔄 Player ${currentPlayer}'s Turn`;
+      drawBoard();
+    }
+
+    function showRules() {
+      document.getElementById('rules-modal').style.display = 'flex';
+    }
+
+    function closeRules() {
+      document.getElementById('rules-modal').style.display = 'none';
+    }
+
+    // Initialize board on load
+    drawBoard();
+  </script>
+
+</body>
+</html>
